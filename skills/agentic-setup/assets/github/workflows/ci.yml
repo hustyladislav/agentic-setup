@@ -1,0 +1,55 @@
+name: CI
+
+# PRs + main only, deliberately.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  check:
+    name: check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 2 # a PR checks out its merge commit; HEAD^1 is the base tip
+      - name: Scope
+        id: scope
+        # Markdown, .claude/** and .agents/** feed no build or runtime path: report the required check as a pass.
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ] \
+            && files=$(git diff --name-only HEAD^1 HEAD) \
+            && [ -n "$files" ] && ! grep -qvE '(\.md$|^\.claude/|^\.agents/)' <<< "$files"; then
+            echo "code=false" >> "$GITHUB_OUTPUT"
+            echo "Docs-only change — nothing to run." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "code=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: ./.github/actions/pnpm
+        if: steps.scope.outputs.code == 'true'
+      - uses: actions/setup-node@v7
+        if: steps.scope.outputs.code == 'true'
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - if: steps.scope.outputs.code == 'true'
+        run: pnpm install --frozen-lockfile
+      - if: steps.scope.outputs.code == 'true'
+        run: pnpm verify
+      - if: steps.scope.outputs.code == 'true'
+        run: pnpm build
+
+  gitleaks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
