@@ -13,6 +13,17 @@ Never overwrite the user's existing instructions blindly — merge them. Files t
 Work on a branch named for the task (e.g. `agentic-setup`). Prefer writing files with your file-editing tool over
 shell here-docs (some sandboxes refuse here-docs next to `sed`/`gh`).
 
+## 0. New repository? Bootstrap first
+
+If there is no repo yet (empty folder, or the user asks for a new project):
+- Ask for the name, visibility and stack only if they can't be inferred; default to private.
+- Scaffold the app with its framework's **current** official starter (check its docs/CLI version first, step 2), set
+  `packageManager`, `.nvmrc` with the current Node LTS, and scripts `dev`, `build`, `test`, `e2e` (if any) and one
+  pre-push bundle (`check`: typecheck + lint + unit).
+- `git init -b main`, first commit, then `gh repo create <owner>/<name> --private --source . --push` — creating a
+  remote is outward-facing: confirm the owner and visibility with the user first.
+- Then run steps 1–5 below on it (commit straight to `main` for this first setup; PRs from then on).
+
 ## 1. Inspect before writing
 
 Read, don't guess. Record findings in a short list you will show the user:
