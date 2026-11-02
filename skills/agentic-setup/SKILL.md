@@ -47,7 +47,9 @@ runner (`pnpm dlx` / `npx` / `bunx`):
 - always: `skills add hustyladislav/agentic-setup -s pr -y` and `skills add mattpocock/skills -s writing-for-agents -y`
 - with a UI: `skills add anthropics/skills -s frontend-design -y`; with shadcn: `skills add shadcn/ui -y`
 - others only if the repo clearly uses the tool (list a repo's skills with `skills add <repo> -l`).
-Commit `skills-lock.json` and the installed files so every clone has them without a network call.
+Pass one agent per call (`-a claude-code`, then the same command with `-a codex`, …) — the CLI rejects several `-a`
+flags at once; without `-a` it may prompt. Commit `skills-lock.json` and the installed files so every clone has them
+without a network call.
 
 ## 4. Repository settings — ask first
 
