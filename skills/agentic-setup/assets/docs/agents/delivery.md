@@ -8,7 +8,7 @@ How work gets from a branch to production. Open this before you push, open a PR,
 - Write the PR body with the `pr` skill and pass it via `--body-file`; after every push to a branch with an open PR, rewrite the body so it describes the PR as it stands.
 - Arm auto-merge (`gh pr merge <n> --auto --squash`) once the PR is ready; it merges when the required checks pass and the branch is up to date.
 - If the branch is behind, `gh pr update-branch <n>`. With several PRs queued, land them **one at a time** — parallel updates restart each other's CI and nothing merges.
-- Resolve conflicts by rebasing onto `main`, then rerun `pnpm verify` and `pnpm e2e` before pushing again.
+- Resolve conflicts by rebasing onto `main`, then rerun the verify command and e2e before pushing again.
 
 ## CI and branch protection
 - CI runs on PRs and `main` only. Required checks on `main`: `check` (typecheck · lint · unit · build), `e2e`, `gitleaks`. Branches must be up to date.

@@ -10,50 +10,81 @@ Never overwrite the user's existing instructions blindly — merge them. Files t
 [`assets/`](assets/) (stored without leading dots; the target path is given below). Why each piece exists:
 [`references/practices.md`](references/practices.md).
 
+Work on a branch named for the task (e.g. `agentic-setup`). Prefer writing files with your file-editing tool over
+shell here-docs (some sandboxes refuse here-docs next to `sed`/`gh`).
+
 ## 1. Inspect before writing
 
 Read, don't guess. Record findings in a short list you will show the user:
-- Package manager and runtime (`packageManager`, lockfiles, `.nvmrc`), language(s), framework, test runners, linter.
-- Scripts that typecheck / lint / test / e2e / build / dev (exact names).
-- Existing agent files: `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `.cursor/rules`, `.github/copilot-instructions.md`, `.claude/`, `.agents/skills`, `skills-lock.json`.
-- CI (`.github/workflows`), hosting/deploy config (`vercel.json`, `netlify.toml`, Dockerfile…), database/migration tool.
-- UI stack (Tailwind? shadcn `components.json`?), user-facing language, auth/tenancy model, anything touching money or real people.
+- Package manager and runtime (`packageManager`, lockfiles, `.nvmrc`), language(s) and **versions** (TypeScript major!),
+  framework, test runners, linter/formatter and what it scans.
+- Monorepo? Where apps, shared UI and config live (`apps/*`, `packages/*`, `components.json` location).
+- Exact script names for typecheck / lint / unit / e2e / build / dev and the **one "verify" command** that runs the
+  pre-push bundle (often `check`, `verify` or `ci`). Use these names everywhere below — never invent `pnpm verify`.
+- Existing agent files: `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `.cursor/rules`, `.github/copilot-instructions.md`,
+  `.claude/`, `.agents/skills`, `skills-lock.json`. Existing docs (`docs/*.md`, ARCHITECTURE, DOMAIN, ADRs).
+- CI (`.github/workflows`: job names, which are required, action versions, where security scans live), hosting/deploy
+  config (`vercel.json` incl. `ignoreCommand`, `netlify.toml`, Dockerfile…), database/migration tool.
+- UI stack (Tailwind? shadcn, Radix or Base UI?), user-facing language, auth/tenancy model, anything touching money or real people.
 
 ## 2. Refresh "latest" — never assume
 
 Your training data is outdated by definition. Before writing versions or config:
-- Latest versions of every tool you reference: `npm view <pkg> version` (or the ecosystem equivalent); GitHub Actions via `gh api repos/<owner>/<action>/releases/latest --jq .tag_name`.
-- Current Claude Code settings/hooks/skills/plugin schema and Codex `AGENTS.md`/skills behaviour from the official docs (fetch them); adjust the assets if a field was renamed or a better mechanism exists.
-- Current skills CLI: `npm view skills version`.
+- Tool versions you reference: `npm view <pkg> version` (read-only lookups via `npm`/`npx` are fine even in pnpm repos).
+- GitHub Actions: `gh api repos/<owner>/<action>/releases/latest --jq .tag_name` — **re-pin every `uses:` in the CI
+  asset**; keep the repo's own pins when they are newer.
+- Current Claude Code settings/hooks/skills/plugin schema and Codex `AGENTS.md`/skills behaviour from the official docs;
+  adjust the assets if a field was renamed or a better mechanism exists.
+- Skills CLI: `npm view skills version`.
 
 ## 3. Install, adapting as you go
 
 | Asset | Target | Adapt |
 |---|---|---|
-| `AGENTS.md` | `AGENTS.md` | Fill every `<…>` from step 1; real commands only; delete "Before you touch…" lines whose topic file you don't create; merge any existing instructions into the right section or a topic file (nothing lost). Keep it an index (< ~120 lines). |
+| `AGENTS.md` | `AGENTS.md` | Fill every `<…>` from step 1 with the repo's real commands (replace `pnpm verify` with the actual verify script); delete "Before you touch…" lines whose topic file you don't create; merge existing instructions into a section or topic file (nothing lost). Keep it an index (< ~120 lines). |
 | `CLAUDE.md` | `CLAUDE.md` | `@AGENTS.md` only. If a `CLAUDE.md` exists, move its content into `AGENTS.md`/topic files first. |
-| `docs/agents/*.md` | `docs/agents/` | Keep `delivery.md`, `domain.md`; adapt `environment.md`, `security.md`; `ui.md` only if there is a UI. Fill with facts from the repo, remove template comments. |
-| `docs/decisions/*` | `docs/decisions/` | Set the date in `0001`. Offer to back-fill 3–6 entries for decisions already visible in the code (database, hosting, framework, auth) — only ones that pass the bar in `README.md`. |
-| `claude/settings.json` | `.claude/settings.json` | Merge with an existing file. Fill `autoMode.environment` with the real repo/host/DB. Keep the PR hooks. Enable the LSP plugin only for TypeScript repos. |
+| `docs/agents/*.md` | `docs/agents/` | Keep `delivery.md`, `domain.md`; adapt `environment.md`, `security.md`; `ui.md` only with a UI (use the repo's real paths — monorepos keep primitives in e.g. `packages/ui`). Add a topic file for any repo-wide rule that doesn't fit (e.g. `api.md`). Env var **names** only, never values. A glossary may live inline in `domain.md` instead of `GLOSSARY.md`. |
+| `docs/decisions/*` | `docs/decisions/` | Set the date in `0001`. Back-fill entries for decisions already visible in the code that pass the README bar. When git history doesn't record the alternatives, keep "Rejected" thin and mark it "to confirm by the owner" — never invent reasons. |
+| `claude/settings.json` | `.claude/settings.json` | Merge with an existing file. Fill `autoMode.environment` with the real repo/host/DB. Keep the PR hooks. |
 | `claude/hooks/*` | `.claude/hooks/` | `chmod +x`. They need `jq` and `gh`. |
-| `claude/marketplace/…` | `.claude/marketplace/` | Rename `claude-plugin/` → `.claude-plugin/` (both levels) and `lsp.json` → `.lsp.json`. TypeScript repos only; ensure `typescript-language-server` is a devDependency. |
-| `claude/launch.json` | `.claude/launch.json` | Real dev command and port. |
-| `github/*` | `.github/` | CI: use the repo's real scripts; keep the docs-only fast path and job names `check`/`e2e`/`gitleaks`. Drop `actions/pnpm` if not pnpm. Merge with existing workflows instead of replacing. |
+| `claude/marketplace/…` | `.claude/marketplace/` | TypeScript repos only. Rename `claude-plugin/` → `.claude-plugin/` (both levels), `lsp.json` → `.lsp.json`. TypeScript ≤ 6: `typescript-language-server --stdio` (add it as a devDependency). TypeScript ≥ 7 (native, no `tsserver`): command `node_modules/.bin/tsc`, args `["--lsp", "--stdio"]`. |
+| `claude/launch.json` | `.claude/launch.json` | Real dev command and port (the app's package in a monorepo). |
+| `github/*` | `.github/` | See "Merging CI" below. Drop `actions/pnpm` if not pnpm. |
 | `gitignore` | `.gitignore` | Append missing lines only. |
 
-**Skills** — install from their sources with the skills CLI (it puts them in `.agents/skills`, links them into each
-agent's directory and pins them in `skills-lock.json`, so `skills update` keeps them current). Use the repo's package
-runner (`pnpm dlx` / `npx` / `bunx`):
+**Existing docs.** Link still-valid docs (architecture, domain rules, design system, security audits) from the matching
+topic file so they stay live; leave the rest as archive. Fix lines that contradict decisions you just recorded (e.g. a
+doc promising preview deployments when previews are off).
+
+**Merging CI.** Keep existing job names, required checks and newer action pins. Add only what is missing:
+- the docs-only fast path to **every required job** (`check`, `e2e`, …), so a docs/agent-config PR still reports
+  them as passing; the path set is Markdown, `.claude/**`, `.agents/**`, `skills-lock.json`. Use the portable scope
+  test from the asset (`grep -vE … | grep -q .`, works with BSD and GNU grep);
+- `gitleaks` only if no workflow runs it yet (it often lives in a `security.yml`);
+- the composite pnpm action only if pnpm setup is slow or flaky — otherwise keep `pnpm/action-setup`.
+Mirror the same skip in the host's deploy-ignore rule (e.g. Vercel `ignoreCommand`) so agent-config commits don't
+burn deploy quota.
+
+**Ignore lists.** Add `.agents/` and `.claude/` to the linter/formatter ignore (Biome `files.includes`/`ignore`,
+ESLint/oxlint ignores, Prettier) and to typecheck/test globs if they would scan them — installed third-party skills
+are not your code.
+
+**Skills** — install from their sources with the skills CLI (it writes them into `.agents/skills` and the agent's own
+directory and pins them in `skills-lock.json`, so `skills update` keeps them current). Use the repo's package runner
+(`pnpm dlx` / `npx` / `bunx`), one agent per call (`-a claude-code`, then again with `-a codex`) — several `-a` flags
+at once fail, and without `-a` it may prompt:
 - always: `skills add hustyladislav/agentic-setup -s pr -y` and `skills add mattpocock/skills -s writing-for-agents -y`
-- with a UI: `skills add anthropics/skills -s frontend-design -y`; with shadcn: `skills add shadcn/ui -y`
+- with a UI: `skills add anthropics/skills -s frontend-design -y`; with shadcn: `skills add shadcn/ui -s shadcn -y`
+  (without `-s` it also installs migration skills you may not want)
 - others only if the repo clearly uses the tool (list a repo's skills with `skills add <repo> -l`).
-Pass one agent per call (`-a claude-code`, then the same command with `-a codex`, …) — the CLI rejects several `-a`
-flags at once; without `-a` it may prompt. Commit `skills-lock.json` and the installed files so every clone has them
-without a network call.
+An install can print "Installation failed" and still have worked, or fail transiently: check `skills-lock.json` and
+the `SKILL.md` files, retry once. Commit the lockfile and installed files so clones work offline. The managed `pr`
+skill refers to "the verify command" generically — don't edit it (it would drift from its source); the repo-specific
+command lives in `AGENTS.md`.
 
 ## 4. Repository settings — ask first
 
-These change shared/outward-facing state, so confirm with the user before running:
+These change shared/outward-facing state, so confirm with the user before running (skip what is already set):
 - Branch protection on `main`: required checks `check`, `gitleaks` (+ `e2e` if it exists), strict up-to-date —
   `gh api -X PUT repos/<o>/<r>/branches/main/protection --input <json>`.
 - Allow auto-merge and delete merged branches: `gh api -X PATCH repos/<o>/<r> -F allow_auto_merge=true -F delete_branch_on_merge=true`.
@@ -63,5 +94,8 @@ These change shared/outward-facing state, so confirm with the user before runnin
 
 - JSON files parse (`jq . .claude/settings.json`); hooks are executable; `.claude/skills/pr/SKILL.md` resolves.
 - Simulate the PR hook: `echo '{"tool_input":{"command":"gh pr create --body x"}}' | .claude/hooks/pr-body-check.sh` must deny.
-- Run the repo's verify/test command if you touched CI or scripts.
-- Open a PR with the `pr` skill. In the summary, list: what was installed, what was adapted, what you merged from existing files, which `<…>` still need the owner (e.g. "Never break" rules), and what you did not verify.
+- Run the repo's verify command, and e2e if you touched CI or scripts. Restore files that tests rewrite as a side
+  effect (generated examples, snapshots) before committing.
+- Open a PR with the `pr` skill (keep any attribution footer the session asks for). In the summary, list what was
+  installed, adapted and merged from existing files, which `<…>`/"to confirm" items still need the owner, and what you
+  did not verify.

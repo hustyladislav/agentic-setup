@@ -11,11 +11,11 @@ The code is the documentation; this file holds only what changes a decision. Ope
 file when the task touches its topic.
 
 ## Commands
-**pnpm only** — never npm, npx or yarn.
+**pnpm only** for installs and scripts — never `npm install`, `npx <tool>` or yarn (read-only lookups like `npm view` are fine).
 ```bash
 pnpm install       # dependencies + TypeScript LSP for agents
 pnpm dev           # app on http://localhost:3000
-pnpm verify        # typecheck + lint + unit — run before every push
+pnpm verify        # <the repo's pre-push bundle: typecheck + lint + unit> — run before every push
 pnpm e2e           # end-to-end tests (required check in CI)
 ```
 
