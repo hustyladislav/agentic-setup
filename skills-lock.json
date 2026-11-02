@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "skills": {
+    "pr": {
+      "source": "hustyladislav/agentic-setup",
+      "sourceType": "github",
+      "skillPath": "skills/pr/SKILL.md",
+      "computedHash": "a0c68a98b4b0573115ba66bf1f909ae975864ff63a887cbadf30d22f6e4071cc"
+    },
+    "writing-for-agents": {
+      "source": "mattpocock/skills",
+      "sourceType": "github",
+      "skillPath": "skills/productivity/writing-for-agents/SKILL.md",
+      "computedHash": "95da47fc97af998e85b7d7e6d57b3ac76727c1e290cfe9ea09005aacb826959f"
+    }
+  }
+}

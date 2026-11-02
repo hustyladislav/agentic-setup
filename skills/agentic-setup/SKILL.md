@@ -37,6 +37,9 @@ Read, don't guess. Record findings in a short list you will show the user:
 - CI (`.github/workflows`: job names, which are required, action versions, where security scans live), hosting/deploy
   config (`vercel.json` incl. `ignoreCommand`, `netlify.toml`, Dockerfile…), database/migration tool.
 - UI stack (Tailwind? shadcn, Radix or Base UI?), user-facing language, auth/tenancy model, anything touching money or real people.
+- **Kind of repo.** No app (a skills/docs/config package, a library)? Then the app-shaped parts below don't apply:
+  skip `ui.md`, `environment.md`, `security.md`, `domain.md`, `launch.json`, the LSP plugin and the `e2e`/deploy bits, and write
+  the repo's own checks (a validation script) as the `check` job. Say in the PR which pieces you skipped and why.
 
 ## 2. Refresh "latest" — never assume
 
@@ -54,7 +57,7 @@ Your training data is outdated by definition. Before writing versions or config:
 |---|---|---|
 | `AGENTS.md` | `AGENTS.md` | Fill every `<…>` from step 1 with the repo's real commands (replace `pnpm verify` with the actual verify script); delete "Before you touch…" lines whose topic file you don't create; merge existing instructions into a section or topic file (nothing lost). Keep it an index (< ~120 lines). |
 | `CLAUDE.md` | `CLAUDE.md` | `@AGENTS.md` only. If a `CLAUDE.md` exists, move its content into `AGENTS.md`/topic files first. |
-| `docs/agents/*.md` | `docs/agents/` | Keep `delivery.md`, `domain.md`; adapt `environment.md`, `security.md`; `ui.md` only with a UI (use the repo's real paths — monorepos keep primitives in e.g. `packages/ui`). Add a topic file for any repo-wide rule that doesn't fit (e.g. `api.md`). Env var **names** only, never values. A glossary may live inline in `domain.md` instead of `GLOSSARY.md`. |
+| `docs/agents/*.md` | `docs/agents/` | Keep `delivery.md` (trim deploy/DB lines the repo doesn't have), `domain.md`; adapt `environment.md`, `security.md`; `ui.md` only with a UI (use the repo's real paths — monorepos keep primitives in e.g. `packages/ui`). Add a topic file for any repo-wide rule that doesn't fit (e.g. `api.md`). Env var **names** only, never values. A glossary may live inline in `domain.md` instead of `GLOSSARY.md`. |
 | `docs/decisions/*` | `docs/decisions/` | Set the date in `0001`. Back-fill entries for decisions already visible in the code that pass the README bar. When git history doesn't record the alternatives, keep "Rejected" thin and mark it "to confirm by the owner" — never invent reasons. |
 | `claude/settings.json` | `.claude/settings.json` | Merge with an existing file. Fill `autoMode.environment` with the real repo/host/DB. Keep the PR hooks. |
 | `claude/hooks/*` | `.claude/hooks/` | `chmod +x`. They need `jq` and `gh`. |
@@ -70,7 +73,8 @@ doc promising preview deployments when previews are off).
 **Merging CI.** Keep existing job names, required checks and newer action pins. Add only what is missing:
 - the docs-only fast path to **every required job** (`check`, `e2e`, …), so a docs/agent-config PR still reports
   them as passing; the path set is Markdown, `.claude/**`, `.agents/**`, `skills-lock.json`. Use the portable scope
-  test from the asset (`grep -vE … | grep -q .`, works with BSD and GNU grep);
+  test from the asset (`grep -vE … | grep -q .`, works with BSD and GNU grep). Skip it when Markdown *is* the product
+  (skills/docs repos): there every PR runs the checks;
 - `gitleaks` only if no workflow runs it yet (it often lives in a `security.yml`);
 - the composite pnpm action only if pnpm setup is slow or flaky — otherwise keep `pnpm/action-setup`.
 Mirror the same skip in the host's deploy-ignore rule (e.g. Vercel `ignoreCommand`) so agent-config commits don't
@@ -95,9 +99,11 @@ command lives in `AGENTS.md`.
 
 ## 4. Repository settings — ask first
 
-These change shared/outward-facing state, so confirm with the user before running (skip what is already set):
-- Branch protection on `main`: required checks `check`, `gitleaks` (+ `e2e` if it exists), strict up-to-date —
-  `gh api -X PUT repos/<o>/<r>/branches/main/protection --input <json>`.
+These change shared/outward-facing state, so confirm with the user before running — unless the request already asks
+for them (e.g. the owner says "apply it"). Skip what is already set:
+- Branch protection on `main`: required checks `check`, `gitleaks` (+ `e2e` if it exists), strict up-to-date, no required
+  reviews for a solo owner, `enforce_admins` off — `gh api -X PUT repos/<o>/<r>/branches/main/protection --input -` with
+  `{"required_status_checks":{"strict":true,"contexts":["check","gitleaks"]},"enforce_admins":false,"required_pull_request_reviews":null,"restrictions":null}`.
 - Allow auto-merge and delete merged branches: `gh api -X PATCH repos/<o>/<r> -F allow_auto_merge=true -F delete_branch_on_merge=true`.
 - Hosting: production deploys from `main` via Git integration; turn off per-branch previews if the plan has a deploy quota.
 

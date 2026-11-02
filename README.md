@@ -35,6 +35,14 @@ Bundled third-party skills are installed from their upstreams:
 [anthropics/skills](https://github.com/anthropics/skills) (`frontend-design`, Apache-2.0) and
 [mattpocock/skills](https://github.com/mattpocock/skills) (`writing-for-agents`, MIT).
 
+## Changelog
+
+- 2026-11-02 — the repo now follows its own skill (AGENTS.md, CI, hooks, branch protection); `agentic-setup` learned to handle repos without an app.
+
+## Contributing
+
+Skill authors: see [AGENTS.md](AGENTS.md) and [docs/agents/release.md](docs/agents/release.md).
+
 ## License
 
 MIT
